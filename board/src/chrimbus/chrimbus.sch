@@ -1,4 +1,5 @@
 EESchema Schematic File Version 4
+LIBS:chrimbus-cache
 EELAYER 26 0
 EELAYER END
 $Descr A4 11693 8268
@@ -975,7 +976,7 @@ ICSPC
 Wire Wire Line
 	6750 2400 6750 2550
 Wire Wire Line
-	6400 2850 6750 2850
+	6400 2850 6550 2850
 $Comp
 L Device:R R21
 U 1 1 5C14B1E2
@@ -1002,4 +1003,32 @@ F 3 "" H 6100 3700 50  0001 C CNN
 $EndComp
 Wire Wire Line
 	6100 3700 6100 3850
+$Comp
+L Device:C C4
+U 1 1 5BFA64D0
+P 6550 2700
+F 0 "C4" V 6298 2700 50  0000 C CNN
+F 1 "0.1uF" V 6389 2700 50  0000 C CNN
+F 2 "Capacitor_SMD:C_0805_2012Metric" H 6588 2550 50  0001 C CNN
+F 3 "~" H 6550 2700 50  0001 C CNN
+	1    6550 2700
+	-1   0    0    1   
+$EndComp
+Connection ~ 6550 2850
+Wire Wire Line
+	6550 2850 6750 2850
+Wire Wire Line
+	6550 2550 6750 2550
+Connection ~ 6750 2550
+$Comp
+L Mechanical:MountingHole MH1
+U 1 1 5BFB160D
+P 5400 1900
+F 0 "MH1" H 5500 1946 50  0000 L CNN
+F 1 "MountingHole" H 5500 1855 50  0000 L CNN
+F 2 "MountingHole:MountingHole_2.2mm_M2" H 5400 1900 50  0001 C CNN
+F 3 "~" H 5400 1900 50  0001 C CNN
+	1    5400 1900
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
