@@ -44,6 +44,7 @@
 #include <xc.h>
 #include <stdint.h>
 
+
 #define SCK_tris TRISCbits.TRISC0
 #define SDA_tris TRISCbits.TRISC1
 
@@ -55,6 +56,7 @@ void sys_initialize(void);
 void i2c_initialize(void);
 void i2c_write(uint8_t address, uint8_t control_word, uint8_t data);
 
+
 _Bool I2C_Transmit(uint8_t data);
 _Bool I2C_Startup(void);
 _Bool I2C_Stop(void);
@@ -63,12 +65,19 @@ uint8_t data;
 uint8_t driver_address;
 uint8_t control_word;
 
-enum{SUCCESS,FAILURE};
+typedef struct LED_t {
+    uint8_t R;
+    uint8_t G;
+    uint8_t B;
+    uint8_t reg;
+    uint8_t num; 
+} LED;
 
-typedef enum led_registers{
-    LED0_r = 02, LED1_r, LED2_r, LED3_r, LED4_r, LED5_r, LED6_r, LED7_r, LED8_r, 
-            LED9_r, LED10_r, LED11_r, LED12_r, LED13_r, LED14_r, LED15_r
-}LED_r;
+
+void Write_LED(LED *led);
+void Initialize_Driver(void);
+
+enum{SUCCESS,FAILURE};
 
 typedef struct I2C_Flags_t{    
     _Bool START;
@@ -76,10 +85,11 @@ typedef struct I2C_Flags_t{
     _Bool STOP;
 } I2C_Flags;
 
-typedef struct led_t{
-    LED_r reg;
-    uint8_t brightness;
-} LED;
+LED LED1 = {0, 0, 0, 0x02, 1};
+LED LED2 = {0, 0, 0, 0x05, 2};
+LED LED3 = {0, 0, 0, 0x08, 3};
+LED LED4 = {0, 0, 0, 0x0B, 4};
+LED LED5 = {0, 0, 0, 0x0E, 5};
 
 I2C_Flags I2C_FLAGS;
 
@@ -87,51 +97,12 @@ void main(void) {
         
     sys_initialize();
     i2c_initialize();
-    driver_address = LED_DRIVER_ADDRESS;
-    
-    LED LED1 = {LED1_r, 0x00};
-    LED LED2 = {LED2_r, 0x00};
-    LED LED3 = {LED3_r, 0x00};
-    LED LED4 = {LED4_r, 0x00};
-    LED LED5 = {LED5_r, 0x00};
-    LED LED6 = {LED6_r, 0x00};
-    LED LED7 = {LED7_r, 0x00};
-    LED LED8 = {LED8_r, 0x00};
-    LED LED9 = {LED9_r, 0x00};
-    LED LED10 = {LED10_r, 0x00};
-    LED LED11 = {LED11_r, 0x00};
-    LED LED12 = {LED12_r, 0x00};
-    LED LED13 = {LED13_r, 0x00};
-    LED LED14 = {LED14_r, 0x00};
-    LED LED15 = {LED15_r, 0x00};
-
-    
+    Initialize_Driver();
     
     while(1){ 
 
-        I2C_FLAGS.STOP = I2C_Stop();
-        
-        I2C_FLAGS.START = I2C_Startup();
-        
-        I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
-        I2C_FLAGS.SEND = I2C_Transmit(0x00);
-        I2C_FLAGS.SEND = I2C_Transmit(0x00);
-        I2C_FLAGS.STOP = I2C_Stop();
-       
-        I2C_FLAGS.START = I2C_Startup();
-        I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
-        I2C_FLAGS.SEND = I2C_Transmit(0x1F & 0x02);
-        I2C_FLAGS.SEND = I2C_Transmit(0xFF);
-        I2C_FLAGS.STOP = I2C_Stop();
-        
-        I2C_FLAGS.START = I2C_Startup();
-        I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);        
-        I2C_FLAGS.SEND = I2C_Transmit(0x1F & 0x14);
-        I2C_FLAGS.SEND = I2C_Transmit(0b00000010);  
-        I2C_FLAGS.STOP = I2C_Stop();
-        
-
-        
+        Write_LED(&LED1);
+        __delay_ms(2000);
     }
     
     return;
@@ -156,6 +127,17 @@ void sys_initialize(void){
     SSP1DATPPS = 0x11;
     RC0PPS = 0x15;
     RC1PPS = 0x16;
+    
+    //TMR0 source = LFINTOSC
+    T0CON1bits.T0CS = 0b100; 
+    //TMR0 postscaler = 0000;
+    T0CON0bits.T0OUTPS = 0;
+    //TMR0 is 16 bit
+    T0CON0bits.T016BIT = 0;
+    //Enable TMR0
+    T0CON0bits.T0EN = 1;
+    
+    
     
     I2C_FLAGS.START = SUCCESS;
     I2C_FLAGS.SEND = SUCCESS;
@@ -247,7 +229,90 @@ _Bool I2C_Stop(void){
        
 }
 
-void Adjust_LED(LED LEDno, uint8_t brightness){
+void Write_LED(LED *led){
     
+    volatile uint32_t r1;
+    volatile uint32_t r2;
+    volatile uint32_t r;
+    srand(TMR0L);
+    r1 = rand();
+    srand(TMR0L);
+    r2 = rand();
+    
+    r = (r1<<16) | r2;
+    
+    
+    
+    // Generate random number
+    
+    //Bit-shift and mask for RGB values
+    led->R = (uint8_t) (r>>16) & 0xFF;
+    led->G = (uint8_t) (r>>8) & 0xFF;
+    led->B = (uint8_t) r & 0xFF;
+    
+    //Send start condition
+    I2C_FLAGS.START = I2C_Startup();
+    //Slave address
+    I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
+    //Select PWM0 register 0x02 WITH AUTO INCREMENT
+    I2C_FLAGS.SEND = I2C_Transmit(0b10100000 | led->reg);
+    //Send R value
+    I2C_FLAGS.SEND = I2C_Transmit(led->R);
+    //Send G value
+    I2C_FLAGS.SEND = I2C_Transmit(led->G);
+    //Send B value
+    I2C_FLAGS.SEND = I2C_Transmit(led->B);
+    //Hopefully things worked?
+    I2C_FLAGS.STOP = I2C_Stop();
+    
+}
+
+void Initialize_Driver(){
+    
+    // startup delay
+    __delay_ms(5);
+    I2C_FLAGS.STOP = I2C_Stop();
+    
+    //Turn the damn thing on
+    //Send start condition
+    I2C_FLAGS.START = I2C_Startup();
+    //Slave Address
+    I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
+    //Select MODE1 register 0x00
+    I2C_FLAGS.SEND = I2C_Transmit(0x00);
+    //Enable main oscillator
+    I2C_FLAGS.SEND = I2C_Transmit(0x00);
+    //Done with this block
+    I2C_FLAGS.STOP = I2C_Stop();
+    
+    //Enable output drivers
+    //Send start condition
+    I2C_FLAGS.START = I2C_Startup();
+    //Slave address
+    I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
+    //Select LEDOUT0 register 0x14 WITH AUTO INCREMENT
+    I2C_FLAGS.SEND = I2C_Transmit(0b10000000 | 0x14);
+    //Enable LEDOUT0
+    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    //Enable LEDOUT1
+    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    //Enable LEDOUT2
+    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    //Enable LEDOUT3
+    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    //Done with this block
+    I2C_FLAGS.STOP = I2C_Stop();
+    
+    //Turn on star LED
+    //Send start condition
+    I2C_FLAGS.START = I2C_Startup();
+    //Slave address
+    I2C_FLAGS.SEND = I2C_Transmit(LED_DRIVER_ADDRESS);
+    //Select PWM15 register 0x11
+    I2C_FLAGS.SEND = I2C_Transmit(0x11);
+    //Light em up bb
+    I2C_FLAGS.SEND = I2C_Transmit(0xFF);
+    //Done with this block
+    I2C_FLAGS.STOP = I2C_Stop();
     
 }
