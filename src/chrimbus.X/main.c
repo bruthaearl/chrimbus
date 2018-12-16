@@ -54,7 +54,7 @@
 
 void sys_initialize(void);
 void i2c_initialize(void);
-void i2c_write(uint8_t address, uint8_t control_word, uint8_t data);
+
 
 
 _Bool I2C_Transmit(uint8_t data);
@@ -78,6 +78,7 @@ void Write_LED(LED *led);
 void Initialize_Driver(void);
 
 enum{SUCCESS,FAILURE};
+enum{black = 0, white, red, orange, yellow, green, blue, indigo, violet, brown};
 
 typedef struct I2C_Flags_t{    
     _Bool START;
@@ -102,6 +103,10 @@ void main(void) {
     while(1){ 
 
         Write_LED(&LED1);
+        Write_LED(&LED2);
+        Write_LED(&LED3);
+        Write_LED(&LED4);
+        Write_LED(&LED5);
         __delay_ms(2000);
     }
     
@@ -235,20 +240,60 @@ void Write_LED(LED *led){
     volatile uint32_t r2;
     volatile uint32_t r;
     srand(TMR0L);
-    r1 = rand();
+    /*r1 = rand();
     srand(TMR0L);
     r2 = rand();
     
     r = (r1<<16) | r2;
+    */
     
+    r1 = rand() % 10;
+    
+    switch(r1){
+        
+        case black :
+            r = 0x00;
+            break;
+        case white :
+            r = 0xFFFFFF;
+            break;
+        case red :
+            r = 0xFF0000;
+            break;
+        case orange :
+            r = 0xFFA500;
+            break;
+        case yellow :
+            r = 0xFFFF00;
+            break;
+        case green :
+            r = 0x00FF00;
+            break;
+        case blue :
+            r = 0x0000FF;
+            break;
+        case indigo : 
+            r = 0xFF1493;
+            break;
+        case violet :
+            r = 0xEE82EE;
+            break;
+        case brown :
+            r = 0xA52A2A;
+            break;
+        default :
+            r = 0x008080;
+            
+    }
     
     
     // Generate random number
     
     //Bit-shift and mask for RGB values
-    led->R = (uint8_t) (r>>16) & 0xFF;
-    led->G = (uint8_t) (r>>8) & 0xFF;
-    led->B = (uint8_t) r & 0xFF;
+    led->R = (uint8_t) ((r>>16) & 0xFF) * 0.05;
+    led->G = (uint8_t) ((r>>8) & 0xFF)* 0.05;
+    led->B = (uint8_t) (r & 0xFF) * 0.05;
+    
     
     //Send start condition
     I2C_FLAGS.START = I2C_Startup();
@@ -293,13 +338,13 @@ void Initialize_Driver(){
     //Select LEDOUT0 register 0x14 WITH AUTO INCREMENT
     I2C_FLAGS.SEND = I2C_Transmit(0b10000000 | 0x14);
     //Enable LEDOUT0
-    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    I2C_FLAGS.SEND = I2C_Transmit(0xFF);
     //Enable LEDOUT1
-    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    I2C_FLAGS.SEND = I2C_Transmit(0xFF);
     //Enable LEDOUT2
-    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    I2C_FLAGS.SEND = I2C_Transmit(0xFF);
     //Enable LEDOUT3
-    I2C_FLAGS.SEND = I2C_Transmit(0xAA);
+    I2C_FLAGS.SEND = I2C_Transmit(0xFF);
     //Done with this block
     I2C_FLAGS.STOP = I2C_Stop();
     
